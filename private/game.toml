@@ -1,0 +1,23 @@
+[main]
+file_path = "default.xex"
+out_directory_path = "recompiled"
+switch_table_file_path = "kinect_sports_analysis.toml"
+
+restgprlr_14_address = 0x82fa7690
+savegprlr_14_address = 0x82fa7640
+restfpr_14_address = 0x82fa8d3c
+savefpr_14_address = 0x82fa8cf0
+restvmx_14_address = 0x82fac178
+savevmx_14_address = 0x82fabee0
+restvmx_64_address = 0x82fac20c
+savevmx_64_address = 0x82fabf74
+
+# Optional settings
+skip_lr = false
+skip_msr = false
+ctr_as_local = false
+xer_as_local = false
+reserved_as_local = false
+cr_as_local = false
+non_argument_as_local = false
+non_volatile_as_local = false
