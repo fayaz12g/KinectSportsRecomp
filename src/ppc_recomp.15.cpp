@@ -1,5 +1,11 @@
 #include "ppc_recomp_shared.h"
 
+__attribute__((alias("__imp__sub_822DD124"))) PPC_WEAK_FUNC(sub_822DD124);
+PPC_FUNC_IMPL(__imp__sub_822DD124) {
+	PPC_FUNC_PROLOGUE();
+	// .long 0x0
+}
+
 __attribute__((alias("__imp__sub_822DD128"))) PPC_WEAK_FUNC(sub_822DD128);
 PPC_FUNC_IMPL(__imp__sub_822DD128) {
 	PPC_FUNC_PROLOGUE();
@@ -25158,11 +25164,5 @@ loc_822E7390:
 	PPC_STORE_U32(ctx.r30.u32 + 128, ctx.r11.u32);
 	// b 0x822e7360
 	goto loc_822E7360;
-}
-
-__attribute__((alias("__imp__sub_822E739C"))) PPC_WEAK_FUNC(sub_822E739C);
-PPC_FUNC_IMPL(__imp__sub_822E739C) {
-	PPC_FUNC_PROLOGUE();
-	// .long 0x0
 }
 

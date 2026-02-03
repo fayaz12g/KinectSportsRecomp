@@ -5512,77 +5512,14 @@ PPC_FUNC_IMPL(__imp__sub_822C1C98) {
 	ctx.r12.u64 = ctx.r12.u64 + ctx.r0.u64;
 	// mtctr r12
 	ctx.ctr.u64 = ctx.r12.u64;
+}
+
+__attribute__((alias("__imp__sub_822C1CC8"))) PPC_WEAK_FUNC(sub_822C1CC8);
+PPC_FUNC_IMPL(__imp__sub_822C1CC8) {
+	PPC_FUNC_PROLOGUE();
 	// bctr 
-	switch (ctx.r11.u64) {
-	case 0:
-		// ERROR: 0x822C1D3C
-		return;
-	case 1:
-		// ERROR: 0x822C1D2C
-		return;
-	case 2:
-		// ERROR: 0x822C1CDC
-		return;
-	case 3:
-		// ERROR: 0x822C1CCC
-		return;
-	case 4:
-		// ERROR: 0x822C1D5C
-		return;
-	case 5:
-		// ERROR: 0x822C1D6C
-		return;
-	case 6:
-		// ERROR: 0x822C1D4C
-		return;
-	case 7:
-		// ERROR: 0x822C1D7C
-		return;
-	case 8:
-		// ERROR: 0x822C1D8C
-		return;
-	case 9:
-		// ERROR: 0x822C1CEC
-		return;
-	case 10:
-		// ERROR: 0x822C1CFC
-		return;
-	case 11:
-		// ERROR: 0x822C1D1C
-		return;
-	case 12:
-		// ERROR: 0x822C1D0C
-		return;
-	case 13:
-		// ERROR: 0x822C1E00
-		return;
-	case 14:
-		// ERROR: 0x822C1E00
-		return;
-	case 15:
-		// ERROR: 0x822C1E00
-		return;
-	case 16:
-		// ERROR: 0x822C1D9C
-		return;
-	case 17:
-		// ERROR: 0x822C1DAC
-		return;
-	case 18:
-		// ERROR: 0x822C1DBC
-		return;
-	case 19:
-		// ERROR: 0x822C1DCC
-		return;
-	case 20:
-		// ERROR: 0x822C1DDC
-		return;
-	case 21:
-		// ERROR: 0x822C1DEC
-		return;
-	default:
-		__builtin_unreachable();
-	}
+	PPC_CALL_INDIRECT_FUNC(ctx.ctr.u32);
+	return;
 }
 
 __attribute__((alias("__imp__sub_822C1CCC"))) PPC_WEAK_FUNC(sub_822C1CCC);
@@ -17015,11 +16952,5 @@ loc_822C6480:
 	// bl 0x82240040
 	ctx.lr = 0x822C649C;
 	sub_82240040(ctx, base);
-}
-
-__attribute__((alias("__imp__sub_822C649C"))) PPC_WEAK_FUNC(sub_822C649C);
-PPC_FUNC_IMPL(__imp__sub_822C649C) {
-	PPC_FUNC_PROLOGUE();
-	// .long 0x0
 }
 

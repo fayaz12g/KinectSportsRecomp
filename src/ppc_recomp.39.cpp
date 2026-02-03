@@ -1,5 +1,16 @@
 #include "ppc_recomp_shared.h"
 
+__attribute__((alias("__imp__sub_82401DA0"))) PPC_WEAK_FUNC(sub_82401DA0);
+PPC_FUNC_IMPL(__imp__sub_82401DA0) {
+	PPC_FUNC_PROLOGUE();
+	// lis r11,-31967
+	ctx.r11.s64 = -2094989312;
+	// addi r3,r11,-760
+	ctx.r3.s64 = ctx.r11.s64 + -760;
+	// blr 
+	return;
+}
+
 __attribute__((alias("__imp__sub_82401DAC"))) PPC_WEAK_FUNC(sub_82401DAC);
 PPC_FUNC_IMPL(__imp__sub_82401DAC) {
 	PPC_FUNC_PROLOGUE();
@@ -6925,11 +6936,5 @@ loc_82404658:
 	ctx.r31.u64 = PPC_LOAD_U64(ctx.r1.u32 + -16);
 	// blr 
 	return;
-}
-
-__attribute__((alias("__imp__sub_82404674"))) PPC_WEAK_FUNC(sub_82404674);
-PPC_FUNC_IMPL(__imp__sub_82404674) {
-	PPC_FUNC_PROLOGUE();
-	// .long 0x0
 }
 

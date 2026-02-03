@@ -15775,6 +15775,8 @@ loc_82270934:
 	// vxor v6,v24,v29
 	_mm_store_si128((__m128i*)ctx.v6.u8, _mm_xor_si128(_mm_load_si128((__m128i*)ctx.v24.u8), _mm_load_si128((__m128i*)ctx.v29.u8)));
 	// mullhwu. r5,r18,r30
+	ctx.r5.u64 = (uint64_t(ctx.r18.u32) * uint64_t(ctx.r30.u32)) >> 32;
+	ctx.cr0.compare<int32_t>(ctx.r5.s32, 0, ctx.xer);
 	// vspltw v1,v0,0
 	_mm_store_si128((__m128i*)ctx.v1.u32, _mm_shuffle_epi32(_mm_load_si128((__m128i*)ctx.v0.u32), 0xFF));
 	// vrlimi128 v6,v24,1,0
