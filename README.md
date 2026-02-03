@@ -1,0 +1,2 @@
+This is built off of XenonRecomp, and is the decompiled (and recompiled) version of Kinect Sports. I had to add some missing instructions for it to recompile, but all missing instructions are fully implemented. 
+The only changes that need to be made are the jump conditions, via the recomp.toml, adding to the functions array. A guide on that can be found [here](https://www.youtube.com/watch?v=-m2mxyCfPt0)
