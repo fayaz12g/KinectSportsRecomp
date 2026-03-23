@@ -26,8 +26,5 @@ inline const char* guest_str(uint32_t addr) {
 
 // ---------------------------------------------------------------------------
 // Entry point — name must match what XenonRecomp emitted for the XEX entry.
-// Check your generated src/ files for a PPC_FUNC_IMPL at the XEX base address
-// (usually something like __imp__sub_82000000 or the module entry export).
-// Update this declaration to match exactly.
 // ---------------------------------------------------------------------------
-extern "C" void recomp_entry(PPCContext& ctx, uint8_t* base);
+extern "C" void _xstart(PPCContext& ctx, uint8_t* base);

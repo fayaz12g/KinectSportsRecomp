@@ -19,10 +19,7 @@ int main(int argc, char** argv) {
     printf("[MAIN] Calling game entry point...\n");
     fflush(stdout);
 
-    // NOTE: Find your actual entry point name by looking in src/ for the
-    // PPC_FUNC_IMPL that corresponds to the XEX entry address.
-    // Then update the extern declaration in host.h and the call below.
-    recomp_entry(ctx, g_memory);
+    _xstart(ctx, g_memory);
 
     printf("[MAIN] Entry point returned\n");
     memory_shutdown();
