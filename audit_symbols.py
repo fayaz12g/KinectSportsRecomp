@@ -1,111 +1,191 @@
 #!/usr/bin/env python3
 """
-audit_symbols.py — Run after first failed build to see every XDK symbol
-the game references. Produces a prioritized list and generates empty stub
-skeletons for any symbol not yet implemented.
+audit_symbols.py — Parses PPC_EXTERN_FUNC(__imp__X) declarations to find all
+XDK imports the game needs, checks which are implemented, generates skeletons.
 
-Usage:
-    python3 audit_symbols.py              # scan src/ for xdk_ references
-    python3 audit_symbols.py --from-map   # scan linker map (more accurate)
+Usage:  python3 audit_symbols.py
 """
 
-import sys
 import os
 import re
 import glob
-from collections import Counter
+from collections import defaultdict
 
 SRC_DIR      = "./src"
 STUBS_DIR    = "./runtime/stubs"
 XENIA_KERNEL = "./xenia/src/xenia/kernel"
 
-def find_all_xdk_calls():
-    """Grep the generated source for anything that looks like an external XDK call."""
-    calls = Counter()
-    pattern = re.compile(r'\b(xdk_\w+|XNui\w+|KIN\w+)\s*\(')
+KINECT_KEYWORDS = ["Nui", "NUI", "Kinect", "kinect", "PsCam", "Biometric"]
 
-    for path in glob.glob(f"{SRC_DIR}/**/*.cpp", recursive=True):
+CATEGORY_PREFIXES = [
+    ("XamNui",    "kinect"),
+    ("XamAvatar", "xam"),
+    ("XamVoice",  "xam"),
+    ("XamUser",   "xam"),
+    ("XamCache",  "xam"),
+    ("Xam",       "xam"),
+    ("NetDll",    "network"),
+    ("XAudio",    "audio"),
+    ("XMA",       "audio"),
+    ("Vd",        "graphics"),
+    ("Ke",        "kernel"),
+    ("Nt",        "kernel"),
+    ("Rtl",       "kernel"),
+    ("Ex",        "kernel"),
+    ("Mm",        "kernel"),
+    ("Ob",        "kernel"),
+    ("Io",        "kernel"),
+    ("Hal",       "kernel"),
+    ("Ps",        "kinect"),
+    ("Stfs",      "kernel"),
+    ("LDI",       "kernel"),
+    ("XeCrypt",   "crypto"),
+    ("XeKeys",    "crypto"),
+    ("Xex",       "xex"),
+    ("XNet",      "network"),
+    ("XMsg",      "xam"),
+    ("XGet",      "xam"),
+]
+
+def categorize(name):
+    for kw in KINECT_KEYWORDS:
+        if kw in name:
+            return "kinect"
+    for prefix, cat in CATEGORY_PREFIXES:
+        if name.startswith(prefix):
+            return cat
+    return "misc"
+
+def find_all_imports():
+    imports = set()
+    pattern = re.compile(r'PPC_EXTERN_FUNC\s*\(\s*__imp__(\w+)\s*\)')
+    search_paths = (
+        glob.glob(f"{SRC_DIR}/**/*.h",   recursive=True) +
+        glob.glob(f"{SRC_DIR}/**/*.cpp", recursive=True) +
+        glob.glob(f"{SRC_DIR}/*.h") +
+        glob.glob(f"{SRC_DIR}/*.cpp")
+    )
+    for path in search_paths:
         with open(path, encoding="utf-8", errors="ignore") as f:
             for line in f:
-                for match in pattern.finditer(line):
-                    calls[match.group(1)] += 1
-    return calls
+                for m in pattern.finditer(line):
+                    imports.add(m.group(1))
+    return imports
 
-def find_implemented_stubs():
-    """Find every extern "C" void xdk_X already written in stubs/."""
+def find_implemented():
     implemented = set()
-    pattern = re.compile(r'extern\s+"C"\s+void\s+(xdk_\w+)\s*\(')
-    for path in glob.glob(f"{STUBS_DIR}/**/*.cpp", recursive=True):
+    pattern = re.compile(r'__imp__(\w+)\s*\(')
+    stub_paths = (
+        glob.glob(f"{STUBS_DIR}/**/*.cpp", recursive=True) +
+        glob.glob(f"{STUBS_DIR}/*.cpp")
+    )
+    for path in stub_paths:
         with open(path, encoding="utf-8", errors="ignore") as f:
-            for line in f:
-                m = pattern.search(line)
-                if m:
-                    implemented.add(m.group(1))
+            content = f.read()
+        for m in pattern.finditer(content):
+            name = m.group(1)
+            nearby = content[m.start():m.start() + 400]
+            if '{' in nearby:
+                implemented.add(name)
     return implemented
 
-def xenia_has_impl(func_name):
-    """Quick grep: does Xenia have this symbol anywhere in kernel/?"""
-    # Strip xdk_ prefix for the search
-    name = func_name.replace("xdk_", "")
+def xenia_ref(name):
+    if not os.path.isdir(XENIA_KERNEL):
+        return None
     for path in glob.glob(f"{XENIA_KERNEL}/**/*.cc", recursive=True):
         try:
             with open(path, encoding="utf-8", errors="ignore") as f:
                 if name in f.read():
-                    return path
-        except:
+                    return os.path.basename(path)
+        except Exception:
             pass
     return None
 
 def main():
     print("=== Kinect Sports XDK Symbol Audit ===\n")
 
-    calls       = find_all_xdk_calls()
-    implemented = find_implemented_stubs()
+    imports     = find_all_imports()
+    implemented = find_implemented()
+    missing     = imports - implemented
 
-    missing = {k: v for k, v in calls.items() if k not in implemented}
-    missing_sorted = sorted(missing.items(), key=lambda x: -x[1])
+    print(f"Total XDK imports declared : {len(imports)}")
+    print(f"Already implemented        : {len(implemented)}")
+    print(f"Missing stubs needed       : {len(missing)}\n")
 
-    print(f"Total unique XDK symbols referenced: {len(calls)}")
-    print(f"Already implemented:                 {len(implemented)}")
-    print(f"Missing stubs:                       {len(missing)}\n")
+    if not imports:
+        print("ERROR: No PPC_EXTERN_FUNC(__imp__...) declarations found.")
+        print(f"  Searched under: {SRC_DIR}/")
+        print("  Check that the file with those declarations is in src/ (not a subdirectory above it)")
+        print("  Also check if ppc_recomp_shared.h is somewhere else and copy/symlink it into src/")
+        return
 
-    kinect_symbols = [(k, v) for k, v in missing_sorted
-                      if any(x in k for x in ["Kinect", "NUI", "XNui", "KIN_", "Nui"])]
-    other_symbols  = [(k, v) for k, v in missing_sorted
-                      if k not in dict(kinect_symbols)]
+    by_cat = defaultdict(list)
+    for name in sorted(missing):
+        by_cat[categorize(name)].append(name)
 
-    if kinect_symbols:
-        print("--- KINECT SYMBOLS (need special handling) ---")
-        for sym, count in kinect_symbols:
-            xenia_ref = xenia_has_impl(sym)
-            ref_str = f" [xenia: {os.path.basename(xenia_ref)}]" if xenia_ref else " [no xenia ref]"
-            print(f"  {sym:50s}  calls={count}{ref_str}")
+    cat_order = ["kinect", "graphics", "audio", "network", "kernel", "xam", "crypto", "xex", "misc"]
+
+    for cat in cat_order:
+        names = by_cat.get(cat, [])
+        if not names:
+            continue
+        tag = "  *** YOUR PRIMARY GOAL — wire to libfreenect ***" if cat == "kinect" else ""
+        print(f"--- {cat.upper()} ({len(names)}){tag} ---")
+        for name in names:
+            ref = xenia_ref(name)
+            print(f"  __imp__{name}" + (f"  [xenia:{ref}]" if ref else ""))
         print()
 
-    print("--- MISSING STUBS (by call frequency) ---")
-    for sym, count in other_symbols[:50]:
-        xenia_ref = xenia_has_impl(sym)
-        ref_str = f" [xenia: {os.path.basename(xenia_ref)}]" if xenia_ref else " [no xenia ref]"
-        print(f"  {sym:50s}  calls={count}{ref_str}")
+    os.makedirs(STUBS_DIR, exist_ok=True)
 
-    if len(other_symbols) > 50:
-        print(f"  ... and {len(other_symbols) - 50} more")
+    for cat in ["kernel", "xam", "audio", "network", "crypto", "xex", "misc"]:
+        names = by_cat.get(cat, [])
+        if not names:
+            continue
+        out_path = f"{STUBS_DIR}/generated_{cat}.cpp"
+        with open(out_path, "w") as f:
+            f.write('#include "stubs.h"\n\n')
+            f.write(f'// AUTO-GENERATED — {cat.upper()} stubs\n')
+            f.write('// Implement using xenia/src/xenia/kernel/ as reference\n\n')
+            for name in sorted(names):
+                f.write(f'PPC_EXTERN_FUNC(__imp__{name}) {{\n')
+                f.write(f'    STUB_LOG("{name}");\n')
+                f.write(f'    ctx.r3.u64 = 0;\n')
+                f.write(f'}}\n\n')
+        print(f"Written: {out_path}  ({len(names)} stubs)")
 
-    # Generate stub skeletons file for agent to fill in
-    output_path = f"{STUBS_DIR}/generated_stubs.cpp"
-    with open(output_path, "w") as out:
-        out.write('#include "stubs.h"\n\n')
-        out.write('// AUTO-GENERATED by audit_symbols.py — fill these in!\n')
-        out.write('// Reference: xenia/src/xenia/kernel/ for each symbol\n\n')
-        for sym, count in other_symbols:
-            out.write(f'// Called {count}x in game source\n')
-            out.write(f'extern "C"\nvoid {sym}(PPCContext* ctx, uint8_t* rdmem) {{\n')
-            out.write(f'    LOG_STUB("{sym[4:]}");\n')
-            out.write(f'    STUB_RETURN_ZERO(ctx);\n')
-            out.write(f'}}\n\n')
+    gfx_names = by_cat.get("graphics", [])
+    if gfx_names:
+        out_path = f"{STUBS_DIR}/generated_graphics.cpp"
+        with open(out_path, "w") as f:
+            f.write('#include "stubs.h"\n\n')
+            f.write('// GRAPHICS STUBS — DO NOT IMPLEMENT YET\n')
+            f.write('// These need a Vulkan backend. Log and return 0 only for now.\n\n')
+            for name in sorted(gfx_names):
+                f.write(f'PPC_EXTERN_FUNC(__imp__{name}) {{\n')
+                f.write(f'    fprintf(stderr, "[GFX-STUB] {name}\\n");\n')
+                f.write(f'    ctx.r3.u64 = 0;\n')
+                f.write(f'}}\n\n')
+        print(f"Written: {out_path}  ({len(gfx_names)} stubs)")
 
-    print(f"\nGenerated stub skeletons -> {output_path}")
-    print("Agent should fill these in using Xenia as reference.")
+    kinect_names = by_cat.get("kinect", [])
+    if kinect_names:
+        out_path = f"{STUBS_DIR}/generated_kinect.cpp"
+        with open(out_path, "w") as f:
+            f.write('#include "stubs.h"\n\n')
+            f.write('// KINECT / NUI STUBS\n')
+            f.write('// Do NOT return fake skeleton data (that was the Xenia dead end)\n')
+            f.write('// Wire these to libfreenect when ready\n')
+            f.write('// Each call prints [KINECT-REVIEW] so you can track which are hit\n\n')
+            for name in sorted(kinect_names):
+                ref = xenia_ref(name)
+                if ref:
+                    f.write(f'// xenia ref: {ref}\n')
+                f.write(f'PPC_EXTERN_FUNC(__imp__{name}) {{\n')
+                f.write(f'    fprintf(stderr, "[KINECT-REVIEW] {name}\\n");\n')
+                f.write(f'    ctx.r3.u64 = 0;\n')
+                f.write(f'}}\n\n')
+        print(f"Written: {out_path}  ({len(kinect_names)} Kinect stubs)")
 
 if __name__ == "__main__":
     main()
