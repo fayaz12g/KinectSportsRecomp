@@ -13,31 +13,16 @@ add_executable(KinectSports
 )
 
 target_include_directories(KinectSports PRIVATE
-    src             # <-- ppc_recomp_shared.h and ppc_context.h live here
+    src
     runtime
     runtime/stubs
 )
 
-# Threading
 find_package(Threads REQUIRED)
 target_link_libraries(KinectSports PRIVATE Threads::Threads)
 
 if(WIN32)
     target_link_libraries(KinectSports PRIVATE ws2_32)
-    # xaudio2/kernel32/user32 are auto-linked by MSVC, don't need to specify
-endif()
-
-# Optimization flags — use generator expressions so MSVC and GCC/Clang both work
-if(MSVC)
-    # /O1 = minimize size, keeps compile times tolerable on 340 giant files
-    # /MP = parallel compilation (uses all cores)
-    set_source_files_properties(${GAME_SOURCES} PROPERTIES
-        COMPILE_OPTIONS "/O1;/MP"
-    )
-else()
-    set_source_files_properties(${GAME_SOURCES} PROPERTIES
-        COMPILE_OPTIONS "-O1"
-    )
 endif()
 
 target_compile_definitions(KinectSports PRIVATE
@@ -47,3 +32,5 @@ target_compile_definitions(KinectSports PRIVATE
 set_target_properties(KinectSports PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/build"
 )
+
+# cmake -B build -S . ; cmake --build build
